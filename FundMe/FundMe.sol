@@ -6,7 +6,15 @@ import "@chainlink/contracts/src/v0.6/vendor/SafeMathChainlink.sol"; //using saf
 contract FundMe {
     using SafeMathChainlink for uint256; //attaching satemath library to uint256 (not needed for solidity versions above 0.8.0)
 
+    
     mapping (address => uint256) public addressToAmountFunded; 
+    address [] public funders; //array of funders to keep track of funders
+    address public owner; 
+
+    constructor () public {
+        owner = msg.sender;  
+    }
+
     function fund() public payable {
         //minimum value of funding is 50$
         uint256 minimumUSD = 50*10**18; //multiplication by 10^18 in order to ensure 18 decimals
@@ -14,7 +22,7 @@ contract FundMe {
         //msg.sender is the caller of the function fund()
         //msg.value is the amount sent with fund()
         addressToAmountFunded[msg.sender] += msg.value; 
-
+        funders.push(msg.sender); 
         //what is ETH => USD conversion?
     }
 
@@ -38,11 +46,23 @@ contract FundMe {
 
     }
 
-    function withdraw() public payable{
-        msg.sender.transfer(address(this).balance); //address of this contract, transfer all the amount of this contract to msg.sender
+    modifier onlyOwner {
+        //only contract owner
+        require(msg.sender == owner); 
+        _;
     }
 
-    function withdrawold() public payable{
-        msg.sender.transfer(0x8D4Cce6933DfE0b04a17F4aF3eD5e25F39067401).balance); 
+    function withdraw() payable onlyOwner public {
+        msg.sender.transfer(address(this).balance); //address of this contract, transfer all the amount of this contract to msg.sender
+        for(uint funderIndex=0; funderIndex <funders.length; funderIndex++) {
+            address funder = funders[funderIndex]; 
+            addressToAmountFunded[funder] = 0; //setting funders to zero
+        }
+
+        funders = new address[](0); // resetting funders array with a new array
     }
+
+    /*function withdrawold() public payable{
+        msg.sender.transfer(0x8D4Cce6933DfE0b04a17F4aF3eD5e25F39067401).balance); 
+    }*/
 }
